@@ -4,18 +4,13 @@ import pandas as pd
 from sqlalchemy import create_engine
 from kaggle.api.kaggle_api_extended import KaggleApi
 
+import constants
+
 
 # ---- SETTINGS ----
 KAGGLE_DATASET = "arianazmoudeh/airbnbopendata"
 DOWNLOAD_DIR = "C:/Users/asus/Documents/Projects/ab_testing"
 CSV_FILE = "Airbnb_Open_Data.csv"
-
-DB_USER = "postgres"
-DB_PASS = "atlasmoth23"
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "airbnb_kaggle"
-TABLE_NAME = "airbnb_kaggle"
 
 # download data from kaggle
 def download_dataset():
@@ -54,7 +49,7 @@ def load_to_postgres():
     print(f"Loaded {len(df):,} rows from CSV.")
 
     #connect to postgres
-    conn_str = f"postgresql://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    conn_str = 'postgresql://postgres:'+constants.PASSWORD+'@localhost:5432/airbnb_kaggle'
     engine = create_engine(conn_str)
     
     print(f"🔗 Connection string: postgresql://{DB_USER}:*****@{DB_HOST}:{DB_PORT}/{DB_NAME}")

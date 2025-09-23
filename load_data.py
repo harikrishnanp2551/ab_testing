@@ -52,9 +52,8 @@ def load_to_postgres():
     conn_str = 'postgresql://postgres:'+constants.PASSWORD+'@localhost:5432/airbnb_kaggle'
     engine = create_engine(conn_str)
     
-    print(f"🔗 Connection string: postgresql://{DB_USER}:*****@{DB_HOST}:{DB_PORT}/{DB_NAME}")
-    print(f"Loading data into Postgres table: {TABLE_NAME}")
-    df.to_sql(TABLE_NAME, engine, if_exists="replace", index=False, chunksize=1000)
+
+    df.to_sql('airbnb_kaggle', engine, if_exists="replace", index=False, chunksize=1000)
     print("Data successfully loaded into Postgres.")
 
 # RUN 

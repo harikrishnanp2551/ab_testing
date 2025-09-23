@@ -1,0 +1,6 @@
+"step","metric_name","metric_value","recorded_at"
+"initial","total_rows","102599","2025-09-23 08:03:09.409114+05:30"
+"check","duplicates_found","541","2025-09-23 08:03:09.409114+05:30"
+"cleaning","duplicates_removed","0","2025-09-23 08:03:09.409114+05:30"
+"check","null_names","0","2025-09-23 08:03:09.409114+05:30"
+"cleaning","null_names_removed","0","2025-09-23 08:03:09.409114+05:30"

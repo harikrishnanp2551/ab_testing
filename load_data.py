@@ -1,11 +1,9 @@
 import os
-import zipfile
 import pandas as pd
 from sqlalchemy import create_engine
 from kaggle.api.kaggle_api_extended import KaggleApi
 
 import constants
-
 
 # ---- SETTINGS ----
 KAGGLE_DATASET = "arianazmoudeh/airbnbopendata"
@@ -30,33 +28,44 @@ def load_to_postgres():
     print("CSV conversion to dataframe")
     df = pd.read_csv(csv_path)
 
-#clean price and service price column
+    # --- Clean column names to snake_case lowercase ---
+    df.columns = (
+        df.columns.str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+    )
+
+    # set id as index if exists
+    if "id" in df.columns:
+        df.set_index("id", inplace=True)
+
+    # clean price and service_fee columns
     if "price" in df.columns:
         df["price"] = (
             df["price"]
             .astype(str)
             .str.replace("[$,]", "", regex=True)
             .astype(float)
-        )  
-    if "service fee" in df.columns:
-        df["service fee"] = (
-            df["service fee"]
+        )
+
+    if "service_fee" in df.columns:
+        df["service_fee"] = (
+            df["service_fee"]
             .astype(str)
             .str.replace("[$,]", "", regex=True)
             .astype(float)
-        ) 
+        )
 
     print(f"Loaded {len(df):,} rows from CSV.")
 
-    #connect to postgres
-    conn_str = 'postgresql://postgres:'+constants.PASSWORD+'@localhost:5432/airbnb_kaggle'
+    # connect to postgres
+    conn_str = f'postgresql://postgres:{constants.PASSWORD}@localhost:5432/airbnb_kaggle'
     engine = create_engine(conn_str)
-    
 
-    df.to_sql('airbnb_kaggle', engine, if_exists="replace", index=False, chunksize=1000)
+    df.to_sql('airbnb_kaggle', engine, if_exists="replace", index=True, chunksize=1000)
     print("Data successfully loaded into Postgres.")
 
-# RUN 
+# RUN
 if __name__ == "__main__":
     download_dataset()
     load_to_postgres()

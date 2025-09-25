@@ -1,4 +1,3 @@
-# app.py
 import os
 import streamlit as st
 import pandas as pd
@@ -6,106 +5,245 @@ from sqlalchemy import create_engine, text
 import plotly.express as px
 
 import constants
+import load_data
+import run_pipeline
 
-st.set_page_config(layout="wide", page_title="Airbnb Dashboard + A/B Test")
+# ---------- Streamlit Config ----------
+st.set_page_config(layout="wide", page_title="Airbnb Dashboard")
+st.markdown("<div class='dashboard-title'>Airbnb Insights Dashboard</div>", unsafe_allow_html=True)
 
-# DB config
-CONN_STR = 'postgresql://postgres:'+constants.PASSWORD+'@'+constants.DB_HOST+':'+constants.DB_PORT+'/'+constants.DB_NAME+''
+# Airbnb theme
+AIRBNB_RED = "#FF5A5F"
+AIRBNB_WHITE = "#FFFFFF"
+
+st.markdown(f"""
+<style>
+    body {{
+        background-color: #F7B7B7;
+    }}
+    /* Dashboard Title */
+    .dashboard-title {{
+        text-align: left;
+        font-size: 36px;
+        font-weight: bold;
+        color: {AIRBNB_RED};
+        margin-bottom: 5px;
+    }}
+    /* Metric cards */
+    .metric-card {{
+        background-color: {AIRBNB_RED};
+        color: {AIRBNB_WHITE};
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 10px;
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+    }}
+    .metric-card h4 {{
+        margin: 0;
+        font-size: 20px;
+    }}
+    .metric-card h2 {{
+        margin: 0;
+        font-size: 40px;
+        font-weight: bold;
+    }}
+    /* Tabs */
+    .stTabs [role="tab"] {{
+        background-color: {AIRBNB_RED};
+        color: white;
+        font-weight: bold;
+        border-radius: 6px 6px 0px 0px;
+        padding: 8px 16px;
+    }}
+    .stTabs [role="tab"]:hover {{
+        background-color: #e0484c;
+        color: white;
+    }}
+    .stTabs [role="tab"][aria-selected="true"] {{
+        background-color: #d53c43;
+        color: white;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------- Database Setup ----------
+CONN_STR = f'postgresql://postgres:{constants.PASSWORD}@{constants.DB_HOST}:{constants.DB_PORT}/{constants.DB_NAME}'
 engine = create_engine(CONN_STR, pool_pre_ping=True)
 
-# Helper to read SQL into dataframe cached
+# ---------- Data Loader & Pipeline ----------
+@st.cache_resource
+def initialize_data():
+    """Runs data load and pipeline once, stores results in Postgres."""
+    load_data.download_dataset()
+    load_data.load_to_postgres()
+    run_pipeline.main()
+    return True
+
+# ---------- Refresh Logic ----------
+if st.sidebar.button("🔄 Refresh Data & Pipeline"):
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    initialize_data()
+    st.success("Data & pipeline refreshed successfully!")
+
+# Initialize on first run
+initialize_data()
+
+# ---------- Helper to read SQL ----------
 @st.cache_data
-def read_sql(query, params=None):
-    return pd.read_sql_query(text(query), engine, params=params)
+def read_sql(query):
+    return pd.read_sql_query(text(query), engine)
 
-st.title("Airbnb — Aggregates Dashboard + A/B Test")
-st.markdown("Precomputed aggregates power this dashboard. If you updated raw data, run `python run_pipeline.py` first.")
+# ---------- Sidebar Filters ----------
+st.sidebar.header("Filters")
+room_types = st.sidebar.multiselect(
+    "Room Type",
+    read_sql("SELECT DISTINCT room_type FROM airbnb_kaggle").room_type.tolist()
+)
+price_range = st.sidebar.slider("Price range", 0, 10000, (0, 1000))
 
-# Top KPIs (from listing_summary / agg tables)
-col1, col2, col3, col4 = st.columns(4)
-try:
-    total_listings_df = read_sql("SELECT COUNT(*) AS total FROM airbnb_kaggle")
-    total_listings = int(total_listings_df.total.iloc[0])
-    col1.metric("Total listings (raw)", f"{total_listings:,}")
-except Exception:
-    col1.metric("Total listings (raw)", "n/a")
+def apply_filters(df):
+    if room_types and "room_type" in df.columns:
+        df = df[df["room_type"].isin(room_types)]
+    if "price" in df.columns:
+        df = df[(df["price"] >= price_range[0]) & (df["price"] <= price_range[1])]
+    return df
 
-# Aggregate KPIs using agg tables
-try:
-    # Average price overall
-    avg_price_df = read_sql("SELECT ROUND(AVG(price)::numeric,2) AS avg_price FROM airbnb_kaggle")
-    col2.metric("Avg price", f"${float(avg_price_df.avg_price.iloc[0]):,.2f}")
-except Exception:
-    col2.metric("Avg price", "n/a")
+# ---------- Tabs ----------
+tab1, tab2, tab3 = st.tabs(["Overview", "A/B Test", "Data Quality"])
 
-try:
-    # Avg review score and availability
-    avg_review = read_sql("SELECT ROUND(AVG(review_scores_rating)::numeric,2) AS avg_review FROM airbnb_kaggle").avg_review.iloc[0]
-    col3.metric("Avg review score", f"{avg_review}")
-except Exception:
-    col3.metric("Avg review score", "n/a")
+# ---- Overview Tab ----
+with tab1:
 
-try:
-    avg_avail = read_sql("SELECT ROUND(AVG(availability_365)::numeric,2) AS avg_avail FROM airbnb_kaggle").avg_avail.iloc[0]
-    col4.metric("Avg availability (365d)", f"{avg_avail}")
-except Exception:
-    col4.metric("Avg availability", "n/a")
+    # Create layout: left (stacked bar) | right (metrics + scatter)
+    left_col, right_col = st.columns([7, 6])
 
-st.markdown("---")
-
-# Neighbourhood breakdown
-st.header("Listings by Neighbourhood")
-nb_df = read_sql("SELECT neighbourhood, total_listings, avg_price, avg_reviews FROM agg_listings_by_neighbourhood ORDER BY total_listings DESC LIMIT 200")
-st.dataframe(nb_df)
-
-fig_nb = px.bar(nb_df, x="neighbourhood", y="total_listings", hover_data=["avg_price","avg_reviews"], title="Listings by Neighbourhood")
-st.plotly_chart(fig_nb, use_container_width=True)
-
-# Room type breakdown
-st.header("Listings by Room type")
-rt_df = read_sql("SELECT \"room type\" as room_type, total_listings, avg_price FROM agg_listings_by_roomtype")
-fig_rt = px.pie(rt_df, names="room_type", values="total_listings", title="Room Type Distribution")
-st.plotly_chart(fig_rt, use_container_width=True)
-st.dataframe(rt_df)
-
-# Price distribution
-st.header("Price distribution")
-pd_df = read_sql("SELECT price_range, listings FROM agg_price_distribution ORDER BY price_range")
-fig_pd = px.bar(pd_df, x="price_range", y="listings", title="Price Ranges")
-st.plotly_chart(fig_pd, use_container_width=True)
-
-# A/B test tab
-st.header("A/B Test (precomputed groups)")
-try:
-    # show group counts
-    ab_counts = read_sql("SELECT group as ab_group, COUNT(*) as listings FROM ab_test_groups GROUP BY group ORDER BY group")
-    st.subheader("Group sizes")
-    st.table(ab_counts)
-
-    # conv proxy: use conv_rate from ab_group_summary if exists, else compute basic metrics
-    try:
-        ab_summary = read_sql("SELECT ab_group, n_listings, avg_price, avg_reviews, conv_rate FROM ab_group_summary ORDER BY ab_group")
-        st.subheader("A/B group summary")
-        st.dataframe(ab_summary)
-    except Exception:
-        st.info("ab_group_summary table not present; computing simple group averages.")
-        fallback = read_sql("""
-            SELECT group AS ab_group, COUNT(*) AS n_listings, ROUND(AVG(price),2) AS avg_price, ROUND(AVG(review_scores_rating),2) AS avg_review
-            FROM ab_test_groups
-            GROUP BY group
-            ORDER BY group
+    # ----- LEFT: Stacked Bar -----
+    with left_col:
+        stacked_raw = read_sql("""
+            SELECT neighbourhood, room_type, price
+            FROM airbnb_kaggle
         """)
-        st.dataframe(fallback)
-except Exception as e:
-    st.warning(f"A/B tables not found or error: {e}")
+        stacked_raw = apply_filters(stacked_raw)
 
-# Data quality tab
-st.header("Data Quality Metrics")
-try:
-    dq = read_sql("SELECT step, metric_name, metric_value, recorded_at FROM data_quality_metrics ORDER BY recorded_at DESC")
+        stacked_df = (
+            stacked_raw
+            .groupby(["neighbourhood", "room_type"])
+            .size()
+            .reset_index(name="total")
+            .sort_values("total", ascending=False)
+        )
+
+        fig_stacked = px.bar(
+            stacked_df, y="neighbourhood", x="total", color="room_type",
+            orientation="h",
+            title="Listings by Neighborhood and Room Type",
+            color_discrete_sequence=px.colors.sequential.Reds,
+            # Optional: auto labels (may be busy for stacked)
+            # text_auto=True,
+        )
+
+        # Broader bars and tighter spacing
+        fig_stacked.update_traces(width=0.9)  # widen across the categorical axis
+        fig_stacked.update_layout(bargap=0.05, bargroupgap=0.5)
+
+        # Scale height to keep bars thick
+        bar_count = stacked_df["neighbourhood"].nunique()
+        fig_stacked.update_layout(height=min(5000, 30 * bar_count + 120))
+
+        # Clean look and optional rounded corners
+        fig_stacked.update_traces(marker_line_width=0)
+        fig_stacked.update_layout(barcornerradius="25%")
+
+        # Keep ordering and theme
+        fig_stacked.update_layout(
+            yaxis={"categoryorder": "total ascending"},
+            bargap=0.05, barmode="stack",
+            plot_bgcolor=AIRBNB_RED, paper_bgcolor=AIRBNB_RED, font_color="white"
+        )
+
+
+        container = st.container(height=780, border=True)  # fixed-height scroll area
+        with container:
+            st.plotly_chart(fig_stacked, use_container_width=True, config={"displayModeBar": False})
+        
+
+    # ----- RIGHT: KPIs + Scatter -----
+    with right_col:
+    # KPIs
+        kpi_df = read_sql("SELECT host_name, number_of_reviews, price FROM airbnb_kaggle")
+        kpi_df = apply_filters(kpi_df)
+
+        total_hosts = kpi_df["host_name"].nunique()
+        total_listings = len(kpi_df)
+        avg_reviews = round(kpi_df["number_of_reviews"].mean(), 2)
+        avg_price = round(kpi_df["price"].mean(), 2)
+
+        # Row 1
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"<div class='metric-card'><h4>Total Hosts</h4><h2>{total_hosts:,}</h2></div>", unsafe_allow_html=True)
+        with c2:
+            st.markdown(f"<div class='metric-card'><h4>Total Listings</h4><h2>{total_listings:,}</h2></div>", unsafe_allow_html=True)
+
+        # Row 2
+        c3, c4 = st.columns(2)
+        with c3:
+            st.markdown(f"<div class='metric-card'><h4>Avg Reviews</h4><h2>{avg_reviews}</h2></div>", unsafe_allow_html=True)
+        with c4:
+            st.markdown(f"<div class='metric-card'><h4>Avg Price</h4><h2>${avg_price}</h2></div>", unsafe_allow_html=True)
+
+       
+
+
+        # Scatter plot
+        scatter_df = read_sql("SELECT price, number_of_reviews, room_type FROM airbnb_kaggle LIMIT 10000")
+        scatter_df = apply_filters(scatter_df)
+
+        fig_scatter = px.scatter(
+            scatter_df, x="number_of_reviews", y="price",
+            opacity=0.6, color="room_type",
+            title="Price vs Number of Reviews",
+            color_discrete_sequence=px.colors.sequential.Reds
+        )
+        fig_scatter.update_xaxes(range=[0, 1200])
+        fig_scatter.update_yaxes(range=[0, 1200])
+        fig_scatter.update_layout(height=500, plot_bgcolor=AIRBNB_RED, paper_bgcolor=AIRBNB_RED, font_color="white")
+
+        avg_price_val = scatter_df["price"].mean()
+        fig_scatter.add_hline(y=avg_price_val, line_dash="dot", line_color="white",
+                              annotation_text=f"Avg Price: {avg_price_val:.0f}",
+                              annotation_position="bottom right")
+
+        st.plotly_chart(fig_scatter, use_container_width=True)
+
+
+
+# ---- A/B Test Tab ----
+with tab2:
+    st.subheader("A/B Test Results")
+    ab_summary = read_sql("SELECT * FROM ab_group_summary")
+    st.dataframe(ab_summary)
+
+    ab_lift = read_sql("SELECT * FROM ab_group_lift")
+    st.dataframe(ab_lift)
+
+    ab_neigh = read_sql("SELECT * FROM ab_neighborhood_summary")
+    st.dataframe(ab_neigh)
+
+# ---- Data Quality Tab ----
+with tab3:
+    st.subheader("Data Quality Metrics")
+    dq = read_sql("SELECT * FROM data_quality_metrics")
     st.dataframe(dq)
-except Exception:
-    st.info("data_quality_metrics table not found. Run cleaning pipeline (run_pipeline.py).")
 
-st.markdown("---")
-st.caption("Dashboard reads only precomputed tables. Re-run pipeline to refresh aggregates.")
+    # Data Preview 
+    st.subheader("Data Preview")
+    df = read_sql("""
+        SELECT id, host_name, name, number_of_reviews, price, reviews_per_month,
+               minimum_nights, last_review, availability_365, room_type, neighbourhood
+        FROM airbnb_kaggle LIMIT 200
+    """)
+    df = apply_filters(df)
+    st.dataframe(df, use_container_width=True)

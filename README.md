@@ -131,14 +131,17 @@ Export options (CSV, JSON, PDF)
 ⚠️ Challenges & Lessons Learned
 Below are some of the key challenges encountered during development, and how you might address them in future work:
 
-Challenge	Description	Mitigation / Lessons
-Secrets & credentials management	You don’t want passwords in your code or repository. Streamlit Cloud needs access to secrets without exposing them.	Use Streamlit’s secrets manager. Fallback to constants.py locally or environment variables.
-Missing dependencies in deployment	On deployment, certain libraries (e.g. psycopg2) may not be installed, causing runtime errors.	Ensure dependencies are listed in requirements.txt (e.g. psycopg2-binary).
-Hard-coded paths incompatible with cloud	Using local file paths (e.g. "C:/Users/...") breaks deployment.	Use relative paths or temp directories (e.g. os.getcwd(), tempfile).
-Database connectivity assumptions	You assumed Postgres would always be accessible (localhost), but on cloud it isn’t.	Implement fallback to SQLite or use a cloud-hosted database.
-KeyError when accessing secrets	The secrets key name didn’t match the code (e.g. st.secrets["secrets"]).	Keep secret keys consistent, or structure nested secret tables.
-Missing modules / imports	Helpers (e.g. load_data.py, run_pipeline.py) needed imports (like streamlit) to access st.secrets.	Always import required modules, test module-level code paths.
-SQL pipelines skipped under fallback mode	When falling back to SQLite, skipping SQL scripts meant derived tables like data_quality_metrics didn’t exist.	Provide Python-based fallback logic to build essential tables.
+
+| Challenge | Description | Mitigation / Lessons |
+|-----------|-------------|-----------------------|
+| **Secrets & credentials management** | Passwords and DB credentials can’t be committed to git. Streamlit Cloud also needs secrets without exposing them. | Use Streamlit’s secrets manager for deployment. Use `constants.py` or environment variables locally. |
+| **Missing dependencies in deployment** | Some libraries (e.g. `psycopg2`) weren’t available on Streamlit Cloud, causing errors. | Add all dependencies explicitly in `requirements.txt` (use `psycopg2-binary` for Postgres). |
+| **Hard-coded local paths** | Windows-specific paths like `C:/Users/...` failed on Streamlit Cloud. | Use relative paths (`os.getcwd()`) or `tempfile` for portable directories. |
+| **Database connectivity assumptions** | The code assumed `localhost` Postgres was always available, which fails in the cloud. | Implement fallback to SQLite, or host Postgres in the cloud. |
+| **Secrets KeyError** | `st.secrets["secrets"]` raised errors because the TOML structure didn’t match. | Keep consistent key names in `secrets.toml`, e.g. `[postgres]`, `[kaggle]`. |
+| **Missing module imports** | Helper scripts needed `streamlit` to access `st.secrets` but didn’t import it. | Ensure all modules import what they need. Test imports in isolation. |
+| **SQL pipeline skipped in fallback** | Skipping SQL files when falling back to SQLite meant derived tables (e.g. `data_quality_metrics`) didn’t exist. | Provide Python fallback logic to create critical tables in SQLite. |
+
 
 🧪 Usage Example & Walkthrough
 On local machine with Postgres, you’ll get full SQL pipeline & derived tables, visualizations enriched.

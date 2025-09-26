@@ -7,3 +7,4 @@ openpyxl
 sqlalchemy
 scipy
 stats
+kaggle

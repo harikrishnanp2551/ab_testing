@@ -14,17 +14,17 @@ os.environ["KAGGLE_KEY"] = kaggle_secrets["key"]
 
 # ---- SETTINGS ----
 KAGGLE_DATASET = "arianazmoudeh/airbnbopendata"
-DOWNLOAD_DIR = "C:/Users/asus/Documents/Projects/ab_testing"
+DOWNLOAD_DIR = os.path.join(os.getcwd(), "kaggle_data")
 CSV_FILE = "Airbnb_Open_Data.csv"
 
-# download data from kaggle
 def download_dataset():
     api = KaggleApi()
     api.authenticate()
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    print("Downloading dataset from kaggle ")
+    print("Downloading dataset from Kaggle...")
     api.dataset_download_files(KAGGLE_DATASET, path=DOWNLOAD_DIR, unzip=True)
     print("Download complete.")
+
 
 # load csv into postgres
 def load_to_postgres():

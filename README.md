@@ -2,6 +2,13 @@
 
 A Streamlit-based dashboard to explore Airbnb data (from Kaggle) and run analytical pipelines. The dashboard is designed to work locally with PostgreSQL, and in cloud environments (like Streamlit Cloud) using SQLite fallback.
 
+<img width="2451" height="1303" alt="Screenshot 2025-09-26 202136" src="https://github.com/user-attachments/assets/d9246787-db2b-4612-968e-ba02566af99f" />
+
+<img width="2022" height="1337" alt="Screenshot 2025-09-26 202116" src="https://github.com/user-attachments/assets/1af8eec3-18c3-4e0d-93cf-da8e2e2d82c4" />
+
+<img width="2437" height="1340" alt="image" src="https://github.com/user-attachments/assets/d694780f-27d5-44f7-a1b8-29b730ce0982" />
+
+
 ---
 
 ## 🧭 Overview

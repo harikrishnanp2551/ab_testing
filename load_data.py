@@ -3,8 +3,14 @@ import pandas as pd
 from sqlalchemy import create_engine
 from kaggle.api.kaggle_api_extended import KaggleApi
 import streamlit as st
+import json
 
 secrets = st.secrets["postgres"]
+
+# Set up Kaggle API credentials from Streamlit secrets
+kaggle_secrets = st.secrets["kaggle"]
+os.environ["KAGGLE_USERNAME"] = kaggle_secrets["username"]
+os.environ["KAGGLE_KEY"] = kaggle_secrets["key"]
 
 # ---- SETTINGS ----
 KAGGLE_DATASET = "arianazmoudeh/airbnbopendata"

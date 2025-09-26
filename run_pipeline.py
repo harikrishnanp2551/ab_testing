@@ -1,10 +1,12 @@
 # run_pipeline.py
 import os
 from sqlalchemy import create_engine, text
-import constants
+
+# Get credentials from Streamlit secrets
+secrets = st.secrets["postgres"]
 
 # connect to postgres
-conn_str = f'postgresql://postgres:{constants.PASSWORD}@{constants.DB_HOST}:{constants.DB_PORT}/{constants.DB_NAME}'
+conn_str = f'postgresql://{secrets["DB_USER"]}:{secrets["PASSWORD"]}@{secrets["DB_HOST"]}:{secrets["DB_PORT"]}/{secrets["DB_NAME"]}'
 engine = create_engine(conn_str)
 
 # SQL files

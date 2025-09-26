@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from kaggle.api.kaggle_api_extended import KaggleApi
 
-import constants
+secrets = st.secrets["postgres"]
 
 # ---- SETTINGS ----
 KAGGLE_DATASET = "arianazmoudeh/airbnbopendata"
@@ -59,7 +59,7 @@ def load_to_postgres():
     print(f"Loaded {len(df):,} rows from CSV.")
 
     # connect to postgres
-    conn_str = f'postgresql://postgres:{constants.PASSWORD}@localhost:5432/airbnb_kaggle'
+    conn_str = f'postgresql://postgres:{secrets["PASSWORD"]}@localhost:5432/airbnb_kaggle'
     engine = create_engine(conn_str)
 
     df.to_sql('airbnb_kaggle', engine, if_exists="replace", index=True, chunksize=1000)

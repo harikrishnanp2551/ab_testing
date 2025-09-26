@@ -6,9 +6,15 @@ import plotly.express as px
 import numpy as np
 from scipy import stats
 
-import constants
 import load_data
 import run_pipeline
+
+import streamlit as st
+from sqlalchemy import create_engine
+
+# Get credentials from Streamlit secrets
+secrets = st.secrets["postgres"]
+
 
 # ---------- Streamlit Config ----------
 st.set_page_config(layout="wide", page_title="Airbnb Dashboard")
@@ -70,7 +76,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------- Database Setup ----------
-CONN_STR = f'postgresql://postgres:{constants.PASSWORD}@{constants.DB_HOST}:{constants.DB_PORT}/{constants.DB_NAME}'
+CONN_STR = f'postgresql://{secrets["DB_USER"]}:{secrets["PASSWORD"]}@{secrets["DB_HOST"]}:{secrets["DB_PORT"]}/{secrets["DB_NAME"]}'
 engine = create_engine(CONN_STR, pool_pre_ping=True)
 
 # ---------- Data Loader & Pipeline ----------

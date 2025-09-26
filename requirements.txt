@@ -8,3 +8,4 @@ sqlalchemy
 scipy
 stats
 kaggle
+psycopg2-binary

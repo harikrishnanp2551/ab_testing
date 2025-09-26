@@ -13,7 +13,7 @@ import streamlit as st
 from sqlalchemy import create_engine
 
 # Get credentials from Streamlit secrets
-secrets = st.secrets["postgres"]
+secrets = st.secrets["secrets"]
 
 
 # ---------- Streamlit Config ----------

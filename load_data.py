@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from kaggle.api.kaggle_api_extended import KaggleApi
 import streamlit as st
 
-secrets = st.secrets["postgres"]
+secrets = st.secrets["secrets"]
 
 # ---- SETTINGS ----
 KAGGLE_DATASET = "arianazmoudeh/airbnbopendata"

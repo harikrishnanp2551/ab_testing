@@ -10,6 +10,43 @@ A Streamlit-based dashboard to explore Airbnb data (from Kaggle) and run analyti
 
 
 ---
+Purpose
+The dashboard estimates how different listing attributes relate to engagement by comparing categories within each feature, since there are no true randomized A/B experiments available in the dataset. Engagement is proxied by the outcome number_of_reviews, and all results are framed as A/B‑style comparisons between category pairs within a feature.
+
+What is compared
+The analysis runs separate comparisons for each categorical or binary feature, including Neighbourhood Group (Brooklyn vs Manhattan), Price Bucket (<100 vs >=100), Room Type (entire_home vs private_room), Instant Bookable (True vs False), Cancellation Policy (flexible vs strict), and Service Fee (below_median vs above_median). Each comparison yields group means, sample sizes, a relative lift from group1 to group2, a p‑value from Welch’s t‑test, and a significance flag based on the defined threshold.
+
+Metric
+The outcome metric is number_of_reviews, used as a proxy for guest engagement with the listing in the absence of direct conversion or session metrics. All averages, lifts, and tests are computed on this metric for the specified category pairs within each feature.
+
+Method
+Direct category comparisons are performed within each feature rather than running a global multivariate model, aligning with the “A/B Test” section’s design note that real A/B experiments are not available.
+
+Welch’s t‑test is used for the two‑sample comparisons because it is robust to unequal variances across category groups.
+
+Lift is defined as the relative percent change from group1 to group2, reported as lift_pct in the tables.
+
+Statistical significance is determined at p < 0.05, and the table includes a boolean significant indicator for each comparison.
+
+How to read the tables
+For each feature, the table shows group1 and group2 with their means (mean1 and mean2), sample sizes (n1 and n2), the relative lift from group1 to group2 (lift_pct), the Welch’s t‑test p_value, and whether the result meets the significance threshold. The “Significant Findings” panel re‑lists only the comparisons that pass the p < 0.05 threshold to make interpretation quicker.
+
+Results summary
+Two comparisons meet the significance threshold in the provided snapshot: Neighbourhood Group and Price Bucket.
+
+Feature	group1 → group2	mean1	mean2	lift_pct	p_value
+Neighbourhood Group	Brooklyn → Manhattan 	28.52 	24.11 	−15.4% 	2.99e−40 
+Price Bucket	<100 → >=100 	25.87 	27.57 	+6.6% 	0.0273 
+Non‑significant comparisons in the snapshot include Room Type (p = 0.116, lift ≈ +1.8%), Instant Bookable (p = 0.555, lift ≈ −0.7%), Cancellation Policy (p = 0.586, lift ≈ −0.8%), and Service Fee (p = 0.589, lift ≈ +0.6%). The narrative summary further notes that Price and Neighbourhood often show significant differences, while Instant Bookable, Cancellation Policy, Room Type, and Service Fee tend not to in this view of the data.
+
+Interpretation notes
+These are observational, A/B‑style category comparisons rather than randomized experiments, so results describe associations within features rather than causal effects. Significance is assessed per comparison using Welch’s t‑test with a threshold of p < 0.05, consistent with the dashboard’s stated methodology.
+
+Reproducing the calculations
+For any chosen feature, split the data into the two category groups shown as group1 and group2, compute mean number_of_reviews and sample sizes for each, and run Welch’s two‑sample t‑test to obtain the p_value. Compute lift_pct as the relative percentage change from group1 to group2 and mark the comparison as significant when p < 0.05, as reflected in the dashboard tables and “Significant Findings” panel.
+
+What to look for in the UI
+The A/B Test section presents an “Overview of Feature Impacts” table with the full set of comparisons and a “Significant Findings” panel listing only those passing the p‑value threshold for quick scanning. Plots such as “Number of Reviews by Neighbourhood Group” and “Number of Reviews by Price Bucket” provide visual context for the tabular differences reported above.
 
 ## 🧭 Overview
 

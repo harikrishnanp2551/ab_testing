@@ -1,6 +1,7 @@
 # run_pipeline.py
 import os
 from sqlalchemy import create_engine, text
+import streamlit as st
 
 # Get credentials from Streamlit secrets
 secrets = st.secrets["secrets"]

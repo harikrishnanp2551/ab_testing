@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 import streamlit as st
 
 # Get credentials from Streamlit secrets
-secrets = st.secrets["secrets"]
+secrets = st.secrets["postgres"]
 
 # connect to postgres
 conn_str = f'postgresql://{secrets["DB_USER"]}:{secrets["PASSWORD"]}@{secrets["DB_HOST"]}:{secrets["DB_PORT"]}/{secrets["DB_NAME"]}'

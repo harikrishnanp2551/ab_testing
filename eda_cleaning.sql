@@ -1,6 +1,6 @@
 SELECT * FROM airbnb_kaggle LIMIT 10;
 
-SELECT COUNT(*) FROM airbnb_kaggle;
+SELECT COUNT (*) FROM airbnb_kaggle;
 
 DROP TABLE IF EXISTS data_quality_metrics;
 
@@ -15,14 +15,20 @@ CREATE TABLE data_quality_metrics (
 INSERT INTO data_quality_metrics (step, metric_name, metric_value)
 SELECT 'initial', 'total_rows', COUNT(*) FROM airbnb_kaggle;
 
+
+SELECT id, COUNT(*)
+FROM airbnb_kaggle
+GROUP By id
+HAVING COUNT(*)>1;
+
 -- Duplicates count
 INSERT INTO data_quality_metrics (step, metric_name, metric_value)
-SELECT 'check', 'duplicates_found', COUNT(*)
+SELECT 'check', 'duplicates_found', COUNT(*) 
 FROM (
   SELECT id, COUNT(*) c FROM airbnb_kaggle GROUP BY id HAVING COUNT(*) > 1
 ) t;
 
--- Remove duplicates (keeping first occurrence)
+--Remove duplicates (keeping first occurrence)
 DELETE FROM airbnb_kaggle a
 USING (
   SELECT id, MIN(ctid) as min_ctid
@@ -31,16 +37,18 @@ USING (
 ) b
 WHERE a.id = b.id AND a.ctid <> b.min_ctid;
 
+
 -- Null name count
 INSERT INTO data_quality_metrics (step, metric_name, metric_value)
-SELECT 'check', 'null_names', COUNT(*) FROM airbnb_kaggle WHERE name IS NULL;
+SELECT 'check', 'null_names', COUNT(*) FROM airbnb_kaggle WHERE "name" IS NULL;
 
 -- Remove rows with null names
-DELETE FROM airbnb_kaggle WHERE name IS NULL;
+DELETE FROM airbnb_kaggle WHERE "name" IS NULL;
+
 
 -- Host identity nulls
 INSERT INTO data_quality_metrics (step, metric_name, metric_value)
-SELECT 'check', 'null_host_identity_verified', COUNT(*)
+SELECT 'check', 'null_host_identity_verified', COUNT(*) 
 FROM airbnb_kaggle WHERE host_identity_verified IS NULL;
 
 -- Price outliers (> 99th percentile)
@@ -68,4 +76,5 @@ SELECT 'summary', 'pct_retained',
        (COUNT(*) * 100.0) / (SELECT metric_value FROM data_quality_metrics WHERE metric_name='total_rows')
 FROM airbnb_kaggle;
 
-SELECT * FROM data_quality_metrics;
+select * from data_quality_metrics;
+

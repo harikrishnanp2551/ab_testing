@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 import plotly.express as px
+import numpy as np
+from scipy import stats
 
 import constants
 import load_data
@@ -222,15 +224,118 @@ with tab1:
 
 # ---- A/B Test Tab ----
 with tab2:
-    st.subheader("A/B Test Results")
-    ab_summary = read_sql("SELECT * FROM ab_group_summary")
-    st.dataframe(ab_summary)
+    st.title("Feature Impact on Number of Reviews")
 
-    ab_lift = read_sql("SELECT * FROM ab_group_lift")
-    st.dataframe(ab_lift)
+    st.markdown(
+        """
+        Since we don’t have real A/B experiments, we compare **categories of each feature directly**.  
+        Outcome: **number_of_reviews** (proxy for engagement).  
+        For binary/categorical features, we run Welch’s t-tests to see if differences are significant.  
+        """
+    )
 
-    ab_neigh = read_sql("SELECT * FROM ab_neighborhood_summary")
-    st.dataframe(ab_neigh)
+    # Load data with engineered features
+    df_feat = read_sql("""
+        SELECT id, number_of_reviews,
+               instant_bookable_flag, room_type_flag, cancellation_flag,
+               price_bucket, service_fee_bucket, neighbourhood_group_flag
+        FROM airbnb_kaggle
+        WHERE number_of_reviews IS NOT NULL
+    """)
+
+    if df_feat.empty:
+        st.warning("No data found. Please refresh pipeline and ensure abtest_tables.sql ran.")
+    else:
+        overview_rows = []
+
+        def compare_groups(series, outcome, labels, feature_name):
+            mask1, mask2 = (series == labels[0]), (series == labels[1])
+            g1, g2 = outcome[mask1], outcome[mask2]
+            mean1, mean2 = g1.mean(), g2.mean()
+            lift = (mean2 - mean1) / mean1 * 100 if mean1 else np.nan
+            p_val = np.nan
+            if len(g1) >= 2 and len(g2) >= 2:
+                _, p_val = stats.ttest_ind(g2, g1, equal_var=False, nan_policy="omit")
+            return {
+                "feature": feature_name,
+                "group1": labels[0], "mean1": mean1, "n1": len(g1),
+                "group2": labels[1], "mean2": mean2, "n2": len(g2),
+                "lift_pct": lift,
+                "p_value": p_val,
+                "significant": p_val < 0.05 if not np.isnan(p_val) else False
+            }
+
+        # Features to test
+        tests = [
+            ("instant_bookable_flag", [True, False], "Instant Bookable"),
+            ("room_type_flag", ["entire_home", "private_room"], "Room Type"),
+            ("cancellation_flag", ["flexible", "strict"], "Cancellation Policy"),
+            ("price_bucket", ["<100", ">=100"], "Price Bucket"),
+            ("service_fee_bucket", ["below_median", "above_median"], "Service Fee"),
+            ("neighbourhood_group_flag", ["Brooklyn", "Manhattan"], "Neighbourhood Group")
+        ]
+
+        for col, labels, name in tests:
+            if all(lbl in df_feat[col].unique() for lbl in labels):
+                overview_rows.append(compare_groups(df_feat[col], df_feat["number_of_reviews"], labels, name))
+
+        overview_df = pd.DataFrame(overview_rows).sort_values(by="p_value")
+
+        st.subheader("Overview of Feature Impacts")
+        st.dataframe(
+            overview_df.style.format({
+                "mean1": "{:.2f}", "mean2": "{:.2f}",
+                "lift_pct": "{:.1f}", "p_value": "{:.3g}"
+            }),
+            use_container_width=True
+        )
+
+        st.markdown(
+            """
+            ### Methodology  
+            * **Direct comparisons** between feature categories  
+            * **Outcome**: number_of_reviews  
+            * **Test**: Welch’s t-test (robust to unequal variances)  
+            * **Lift**: relative % change from group1 → group2  
+            * **Significance**: p < 0.05  
+            """
+        )
+
+        sig_df = overview_df[overview_df["significant"]]
+        if not sig_df.empty:
+            st.subheader("Significant Findings")
+            st.write(sig_df[["feature", "group1", "mean1", "group2", "mean2", "lift_pct", "p_value"]])
+
+            for _, row in sig_df.head(2).iterrows():
+                col_name = tests[[t[2] for t in tests].index(row["feature"])][0]
+                labels = [row["group1"], row["group2"]]
+                subset = df_feat[df_feat[col_name].isin(labels)]
+                fig = px.box(
+                    subset, x=col_name, y="number_of_reviews", points="all",
+                    title=f"Number of Reviews by {row['feature']}"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No statistically significant differences at p < 0.05.")
+
+                # Narrative summary
+        st.markdown("### Narrative Summary")
+        if not sig_df.empty:
+            insights = []
+            for _, row in sig_df.iterrows():
+                direction = "more" if row["lift_pct"] > 0 else "fewer"
+                insights.append(
+                    f"- **{row['feature']}**: {row['group2']} listings have "
+                    f"{abs(row['lift_pct']):.1f}% {direction} reviews than {row['group1']} (p={row['p_value']:.3g})."
+                )
+            st.markdown("\n".join(insights))
+            st.markdown(
+                "👉 Overall: Price and Neighbourhood often show significant differences, "
+                "while Instant Bookable, Cancellation Policy, Room Type, and Service Fee tend not to."
+            )
+        else:
+            st.markdown("No feature shows statistically significant differences. Many effects may be too small to detect.")
+
 
 # ---- Data Quality Tab ----
 with tab3:

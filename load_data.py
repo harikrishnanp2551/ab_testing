@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine
 from kaggle.api.kaggle_api_extended import KaggleApi
+import streamlit as st
 
 secrets = st.secrets["postgres"]
 

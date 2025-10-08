@@ -9,94 +9,43 @@ A Streamlit-based dashboard to explore Airbnb data (from Kaggle) and run analyti
 <img width="2437" height="1340" alt="image" src="https://github.com/user-attachments/assets/d694780f-27d5-44f7-a1b8-29b730ce0982" />
 
 
----
-Purpose
-The dashboard estimates how different listing attributes relate to engagement by comparing categories within each feature, since there are no true randomized A/B experiments available in the dataset. Engagement is proxied by the outcome number_of_reviews, and all results are framed as A/B‑style comparisons between category pairs within a feature.
+# Airbnb Insights Dashboard
 
-What is compared
-The analysis runs separate comparisons for each categorical or binary feature, including Neighbourhood Group (Brooklyn vs Manhattan), Price Bucket (<100 vs >=100), Room Type (entire_home vs private_room), Instant Bookable (True vs False), Cancellation Policy (flexible vs strict), and Service Fee (below_median vs above_median). Each comparison yields group means, sample sizes, a relative lift from group1 to group2, a p‑value from Welch’s t‑test, and a significance flag based on the defined threshold.
-
-Metric
-The outcome metric is number_of_reviews, used as a proxy for guest engagement with the listing in the absence of direct conversion or session metrics. All averages, lifts, and tests are computed on this metric for the specified category pairs within each feature.
-
-Method
-Direct category comparisons are performed within each feature rather than running a global multivariate model, aligning with the “A/B Test” section’s design note that real A/B experiments are not available.
-
-Welch’s t‑test is used for the two‑sample comparisons because it is robust to unequal variances across category groups.
-
-Lift is defined as the relative percent change from group1 to group2, reported as lift_pct in the tables.
-
-Statistical significance is determined at p < 0.05, and the table includes a boolean significant indicator for each comparison.
-
-How to read the tables
-For each feature, the table shows group1 and group2 with their means (mean1 and mean2), sample sizes (n1 and n2), the relative lift from group1 to group2 (lift_pct), the Welch’s t‑test p_value, and whether the result meets the significance threshold. The “Significant Findings” panel re‑lists only the comparisons that pass the p < 0.05 threshold to make interpretation quicker.
-
-Results summary
-Two comparisons meet the significance threshold in the provided snapshot: Neighbourhood Group and Price Bucket.
-
-Feature	group1 → group2	mean1	mean2	lift_pct	p_value
-Neighbourhood Group	Brooklyn → Manhattan 	28.52 	24.11 	−15.4% 	2.99e−40 
-Price Bucket	<100 → >=100 	25.87 	27.57 	+6.6% 	0.0273 
-Non‑significant comparisons in the snapshot include Room Type (p = 0.116, lift ≈ +1.8%), Instant Bookable (p = 0.555, lift ≈ −0.7%), Cancellation Policy (p = 0.586, lift ≈ −0.8%), and Service Fee (p = 0.589, lift ≈ +0.6%). The narrative summary further notes that Price and Neighbourhood often show significant differences, while Instant Bookable, Cancellation Policy, Room Type, and Service Fee tend not to in this view of the data.
-
-Interpretation notes
-These are observational, A/B‑style category comparisons rather than randomized experiments, so results describe associations within features rather than causal effects. Significance is assessed per comparison using Welch’s t‑test with a threshold of p < 0.05, consistent with the dashboard’s stated methodology.
-
-Reproducing the calculations
-For any chosen feature, split the data into the two category groups shown as group1 and group2, compute mean number_of_reviews and sample sizes for each, and run Welch’s two‑sample t‑test to obtain the p_value. Compute lift_pct as the relative percentage change from group1 to group2 and mark the comparison as significant when p < 0.05, as reflected in the dashboard tables and “Significant Findings” panel.
-
-What to look for in the UI
-The A/B Test section presents an “Overview of Feature Impacts” table with the full set of comparisons and a “Significant Findings” panel listing only those passing the p‑value threshold for quick scanning. Plots such as “Number of Reviews by Neighbourhood Group” and “Number of Reviews by Price Bucket” provide visual context for the tabular differences reported above.
-
-## 🧭 Overview
-
-This project enables:
-
-- Downloading Airbnb dataset from Kaggle
-- Cleaning and transforming data
-- Loading the data into a database (PostgreSQL locally, or SQLite in restricted environments)
-- Running SQL-based pipelines/analytics (e.g. quality metrics, aggregations)
-- Rendering interactive visualizations via Streamlit
+This project offers an interactive dashboard built in Streamlit that explores Airbnb listing data, runs feature-level “A/B tests”, and monitors data quality.
 
 ---
 
-## 🚀 Features
+## What It Does
 
-- **Data ingestion**: Fetch data from Kaggle automatically  
-- **Dynamic DB backend**: Prefer PostgreSQL if available, fall back to SQLite  
-- **SQL pipelines**: Run `.sql` scripts for cleaning, aggregations, AB testing  
-- **Dashboard UI**: Visualize metrics, trends, insights with Streamlit  
+- Downloads Airbnb data from Kaggle  
+- Cleans and transforms the data  
+- Loads into a database — PostgreSQL (when available) or SQLite fallback  
+- Runs analytics pipelines, including derived tables and comparisons  
+- Visualizes insights via a web dashboard
 
 ---
 
-## 🛠️ Setup & Installation
+## How to Set Up
 
-### Prerequisites
+### Requirements
 
 - Python 3.8+  
-- `kaggle` API installed  
-- Local PostgreSQL instance (optional, for local development)  
-- Kaggle API credentials (username & key)  
-- Streamlit secrets file for deployment environments  
+- `kaggle` library  
+- (Optional) PostgreSQL server for local development  
+- Kaggle API credentials  
+- Streamlit
 
-### Installation
+### Installation Steps
 
-1. Clone the repo:
+1. Clone this repo.  
+2. Install dependencies:
 
    ```bash
-   git clone <repo-url>
-   cd <repo-folder>
-Setup Python environment and install dependencies:
+   pip install -r requirements.txt
 
-bash
-Copy code
-pip install -r requirements.txt
-Add secrets:
 
-Locally: create .streamlit/secrets.toml:
+Locally, create ./.streamlit/secrets.toml (or other secret file) with contents like:
 
-toml
-Copy code
 [postgres]
 DB_USER = "your_pg_user"
 PASSWORD = "your_pg_password"
@@ -107,16 +56,15 @@ DB_NAME = "airbnb_kaggle"
 [kaggle]
 username = "your_kaggle_username"
 key = "your_kaggle_key"
-On Streamlit Cloud: set these values in Settings → Secrets.
 
-Run the app:
 
-bash
-Copy code
+On Streamlit Cloud, one can set the same keys via the Secrets UI.
+
+Run:
+
 streamlit run app.py
-📂 File Structure
-pgsql
-Copy code
+
+File Layout
 .
 ├── app.py
 ├── db_utils.py
@@ -127,52 +75,21 @@ Copy code
 ├── agg_tables.sql
 ├── requirements.txt
 └── README.md
-🔮 Future Updates (Roadmap)
-Here are features or improvements to consider in future versions:
 
-Automatic fallback / hybrid mode
 
-Support automatic switching between PostgreSQL and SQLite
+db_utils.py — logic to choose PostgreSQL or SQLite
 
-Rebuild derived tables (e.g. data_quality_metrics) via Python if SQL scripts fail on SQLite
+load_data.py — download + ingest data
 
-Full SQL compatibility across DB types
+run_pipeline.py — run SQL scripts or fallback logic
 
-Adapt SQL scripts so they run both on PostgreSQL and on SQLite
+.sql files — cleaning, aggregation, tests
 
-Use SQLAlchemy dialects to bridge syntax differences
+app.py — main dashboard interface
 
-Testing & CI/CD
 
-Write unit & integration tests
 
-Automate deployment & rebuilds
-
-Error handling & logging improvements
-
-More informative error messages
-
-Better logging infrastructure
-
-Modularization & code cleanup
-
-Move dashboard logic into reusable modules
-
-Use blueprints/components for UI
-
-Performance & scalability
-
-Pagination, query optimizations
-
-Handling larger datasets (e.g. chunking, caching)
-
-User interface enhancements
-
-Additional filters, drill-downs
-
-Export options (CSV, JSON, PDF)
-
-⚠️ Challenges & Lessons Learned
+##Challenges & Lessons Learned
 Below are some of the key challenges encountered during development, and how you might address them in future work:
 
 
@@ -187,12 +104,42 @@ Below are some of the key challenges encountered during development, and how you
 | **SQL pipeline skipped in fallback** | Skipping SQL files when falling back to SQLite meant derived tables (e.g. `data_quality_metrics`) didn’t exist. | Provide Python fallback logic to create critical tables in SQLite. |
 
 
-🧪 Usage Example & Walkthrough
-On local machine with Postgres, you’ll get full SQL pipeline & derived tables, visualizations enriched.
+Future Enhancements
 
-On Streamlit Cloud (or no Postgres access), app will switch to SQLite automatically. It may skip some SQL pipeline steps, or you may supply Python-based fallbacks for derived metrics.
+Better fallback logic: run SQL scripts (or Python equivalents) even under SQLite
 
-UI continues to function using the available tables.
+Harmonize SQL scripts so they run both on Postgres and SQLite
 
-🏁 Conclusion
-This project provides a way to build a data-driven dashboard with flexible backend options (Postgres / SQLite). The goal is to make deployment seamless while keeping local development full-featured. In upcoming versions, the fallback behavior, compatibility, and automation will be improved.
+Automate testing, deployment, and error logging
+
+Add more visualizations, filters, and export options
+
+Support incremental data updates instead of full reloads
+
+Add user authentication, dynamic queries, and performance tuning
+
+A/B Test Summary
+
+This dashboard includes a kind of “A/B test” simulation: comparing different feature categories (e.g. high price vs low price, different neighborhoods) on the outcome number_of_reviews (as a proxy for engagement). We use Welch’s t-test to see if differences are statistically significant. The goal is to find which features are likely to drive engagement.
+
+How to Use & Explore
+
+Launch the dashboard.
+
+Data will download (if not already present), cleaned, and loaded.
+
+Navigate through tabs: data quality, analytics, feature comparisons, etc.
+
+In the “A/B Test” tab, see comparisons across features and significance tests.
+
+Optionally refresh the pipeline to re-download or re-run logic.
+
+Limitations & Notes
+
+SQLite fallback may not support all SQL features used in the pipeline
+
+The A/B comparisons are observational — not true randomized experiments
+
+The size of dataset and memory constraints may limit performance
+
+Edge cases in data types or missing columns might throw errors

@@ -89,7 +89,7 @@ app.py — main dashboard interface
 
 
 
-##Challenges & Lessons Learned
+## Challenges & Lessons Learned
 Below are some of the key challenges encountered during development, and how you might address them in future work:
 
 
@@ -104,7 +104,7 @@ Below are some of the key challenges encountered during development, and how you
 | **SQL pipeline skipped in fallback** | Skipping SQL files when falling back to SQLite meant derived tables (e.g. `data_quality_metrics`) didn’t exist. | Provide Python fallback logic to create critical tables in SQLite. |
 
 
-Future Enhancements
+## Future Enhancements
 
 Better fallback logic: run SQL scripts (or Python equivalents) even under SQLite
 
@@ -118,11 +118,11 @@ Support incremental data updates instead of full reloads
 
 Add user authentication, dynamic queries, and performance tuning
 
-A/B Test Summary
+# A/B Test Summary
 
 This dashboard includes a kind of “A/B test” simulation: comparing different feature categories (e.g. high price vs low price, different neighborhoods) on the outcome number_of_reviews (as a proxy for engagement). We use Welch’s t-test to see if differences are statistically significant. The goal is to find which features are likely to drive engagement.
 
-How to Use & Explore
+## How to Use & Explore
 
 Launch the dashboard.
 
@@ -134,7 +134,7 @@ In the “A/B Test” tab, see comparisons across features and significance test
 
 Optionally refresh the pipeline to re-download or re-run logic.
 
-Limitations & Notes
+## Limitations & Notes
 
 SQLite fallback may not support all SQL features used in the pipeline
 
